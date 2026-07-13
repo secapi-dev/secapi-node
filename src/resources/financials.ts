@@ -87,7 +87,9 @@ export interface SegmentsParams {
   metric?: string;
   axis?: string;
   segmentType?: string;
+  /** Fiscal year as YYYY. Omit for the latest period matching `qtrs`. */
   period?: string;
+  /** Reporting span: 1-3 for quarterly (Q1-Q3), 4 for fiscal year. */
   qtrs?: number;
   accessionNumber?: string;
   limit?: number;
@@ -97,7 +99,9 @@ export interface SegmentCompareParams {
   metric?: string;
   axis?: string;
   segmentType?: string;
+  /** Comma-separated fiscal years as YYYY. */
   periods?: ListParam;
+  /** Reporting span: 1-3 for quarterly (Q1-Q3), 4 for fiscal year. */
   qtrs?: number;
   limit?: number;
 }
