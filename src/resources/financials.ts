@@ -4,7 +4,10 @@ import type {
   CanonicalCashFlow,
   CanonicalIncomeStatement,
   CompaniesSearchResponse,
+  CompanyFinancialFilingsResponse,
   CompanyFinancialStatement,
+  CompanyLatestFinancialsResponse,
+  CompanyStandardizedStatementsResponse,
   ConceptsListResponse,
   FinancialMetricRankingResponse,
   FinancialMetricSeriesResponse,
@@ -13,6 +16,7 @@ import type {
   FinancialSegmentResponse,
   FinancialXbrl,
   SecApiObject,
+  SharesOutstandingResponse,
 } from "../types.js";
 
 const STATEMENTS_BASE = "/v1/financials/filings";
@@ -35,6 +39,43 @@ export interface StatementLookupParams {
   ticker?: string;
   cik?: string;
   form?: string;
+}
+
+/** Statements available as filed ("as reported"). */
+export type StatementKind =
+  | "income-statement"
+  | "balance-sheet"
+  | "cash-flow"
+  | "stockholders-equity"
+  | "comprehensive-income";
+
+/** Statements available in the standardized (comparable across companies) form. */
+export type StandardizedStatementKind = "income-statement" | "balance-sheet" | "cash-flow";
+
+export interface CompanyFilingsParams {
+  limit?: number;
+  page?: number;
+}
+
+export interface LatestByCompanyParams {
+  /** Restrict to annual (10-K) or quarterly (10-Q) filings. Omit for whichever is most recent. */
+  period?: "annual" | "quarterly";
+}
+
+export interface StatementHistoryParams {
+  /**
+   * annual = fiscal years; quarterly = single quarters; ytd = year-to-date spans from
+   * quarterly filings (the only complete series for cash flow, which 10-Qs report year to date).
+   */
+  period?: "annual" | "quarterly" | "ytd";
+  /** Number of most recent periods to return (1-40). */
+  limit?: number;
+}
+
+export interface SharesOutstandingParams {
+  ticker?: string;
+  /** Takes precedence over ticker. */
+  cik?: string;
 }
 
 export interface XbrlParams extends StatementLookupParams {
@@ -126,38 +167,85 @@ export class Financials extends BaseResource {
     });
   }
 
-  async incomeStatement(
+  /**
+   * The company's most recent 10-K or 10-Q with its standardized income statement, balance
+   * sheet and cash flow statement in one response. `issuer` is a ticker or a CIK. A statement
+   * is null when it could not be standardized for that filing.
+   */
+  latest(issuer: string, params: LatestByCompanyParams = {}): Promise<CompanyLatestFinancialsResponse> {
+    return this.client.get(`/v1/financials/${encodePath(issuer)}/latest`, {
+      period: params.period,
+    });
+  }
+
+  /** Annual and quarterly filings of a company, newest first. `issuer` is a ticker or a CIK. */
+  filings(issuer: string, params: CompanyFilingsParams = {}): Promise<CompanyFinancialFilingsResponse> {
+    return this.client.get(`/v1/financials/${encodePath(issuer)}/filings`, {
+      limit: params.limit,
+      page: params.page,
+    });
+  }
+
+  /** A statement as filed, from the company's most recent filing that contains it. */
+  companyStatement(
+    issuer: string,
+    statement: StatementKind,
+    params: LatestByCompanyParams = {},
+  ): Promise<CompanyFinancialStatement> {
+    return this.client.get(`/v1/financials/${encodePath(issuer)}/statements/${encodePath(statement)}`, {
+      period: params.period,
+    });
+  }
+
+  /**
+   * Standardized statement history for a company: the most recent periods, newest first, one
+   * entry per period end. Restated periods come from the latest filing that reports them.
+   */
+  statementHistory(
+    issuer: string,
+    statement: StandardizedStatementKind,
+    params: StatementHistoryParams = {},
+  ): Promise<CompanyStandardizedStatementsResponse> {
+    return this.client.get(
+      `/v1/financials/${encodePath(issuer)}/statements/${encodePath(statement)}/standardized`,
+      {
+        period: params.period,
+        limit: params.limit,
+      },
+    );
+  }
+
+  sharesOutstanding(params: SharesOutstandingParams): Promise<SharesOutstandingResponse> {
+    return this.client.get("/v1/financials/shares-outstanding", {
+      ticker: params.ticker,
+      cik: params.cik,
+    });
+  }
+
+  incomeStatement(accessionNumber?: string, params: StatementLookupParams = {}): Promise<CompanyFinancialStatement> {
+    return this.statementFor("income-statement", accessionNumber, params);
+  }
+
+  balanceSheet(accessionNumber?: string, params: StatementLookupParams = {}): Promise<CompanyFinancialStatement> {
+    return this.statementFor("balance-sheet", accessionNumber, params);
+  }
+
+  cashFlow(accessionNumber?: string, params: StatementLookupParams = {}): Promise<CompanyFinancialStatement> {
+    return this.statementFor("cash-flow", accessionNumber, params);
+  }
+
+  stockholdersEquity(
     accessionNumber?: string,
     params: StatementLookupParams = {},
   ): Promise<CompanyFinancialStatement> {
-    const accession = await this.requireAccession(accessionNumber, params);
-    return this.statement(accession, "income-statement");
+    return this.statementFor("stockholders-equity", accessionNumber, params);
   }
 
-  async balanceSheet(accessionNumber?: string, params: StatementLookupParams = {}): Promise<CompanyFinancialStatement> {
-    const accession = await this.requireAccession(accessionNumber, params);
-    return this.statement(accession, "balance-sheet");
-  }
-
-  async cashFlow(accessionNumber?: string, params: StatementLookupParams = {}): Promise<CompanyFinancialStatement> {
-    const accession = await this.requireAccession(accessionNumber, params);
-    return this.statement(accession, "cash-flow");
-  }
-
-  async stockholdersEquity(
+  comprehensiveIncome(
     accessionNumber?: string,
     params: StatementLookupParams = {},
   ): Promise<CompanyFinancialStatement> {
-    const accession = await this.requireAccession(accessionNumber, params);
-    return this.statement(accession, "stockholders-equity");
-  }
-
-  async comprehensiveIncome(
-    accessionNumber?: string,
-    params: StatementLookupParams = {},
-  ): Promise<CompanyFinancialStatement> {
-    const accession = await this.requireAccession(accessionNumber, params);
-    return this.statement(accession, "comprehensive-income");
+    return this.statementFor("comprehensive-income", accessionNumber, params);
   }
 
   async xbrl(accessionNumber?: string, params: XbrlParams = {}): Promise<FinancialXbrl> {
@@ -325,6 +413,25 @@ export class Financials extends BaseResource {
     return this.client.get(`${STATEMENTS_BASE}/${encodePath(accession)}/statements/${kind}`);
   }
 
+  /**
+   * With an accession number: that filing's statement. With only a ticker or CIK: the API
+   * picks the company's latest filing that has the statement (one request). A `form` other
+   * than 10-K / 10-Q still goes through the filing search, which can match any form.
+   */
+  private async statementFor(
+    kind: StatementKind,
+    accessionNumber: string | undefined,
+    params: StatementLookupParams,
+  ): Promise<CompanyFinancialStatement> {
+    const issuer = params.cik ?? params.ticker;
+    const period = periodForForm(params.form);
+    if (!accessionNumber && issuer && period !== null) {
+      return this.companyStatement(issuer, kind, period ? { period } : {});
+    }
+    const accession = await this.requireAccession(accessionNumber, params);
+    return this.statement(accession, kind);
+  }
+
   private async requireAccession(accessionNumber: string | undefined, params: StatementLookupParams): Promise<string> {
     if (accessionNumber) {
       return accessionNumber;
@@ -363,6 +470,21 @@ export class Financials extends BaseResource {
     const who = params.ticker ?? params.cik ?? "company";
     throw new Error(`Could not find a filing to resolve a statement for ${who}. Pass an explicit accessionNumber instead.`);
   }
+}
+
+/** undefined = no form filter; "annual"/"quarterly" = 10-K/10-Q; null = some other form. */
+function periodForForm(form: string | undefined): "annual" | "quarterly" | undefined | null {
+  if (!form) {
+    return undefined;
+  }
+  const upper = form.trim().toUpperCase();
+  if (upper === "10-K") {
+    return "annual";
+  }
+  if (upper === "10-Q") {
+    return "quarterly";
+  }
+  return null;
 }
 
 function extractFilings(response: CompaniesSearchResponse): SecApiObject[] {

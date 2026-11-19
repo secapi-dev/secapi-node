@@ -77,6 +77,15 @@ await client.filings.formTypes();
 ### `client.financials`
 
 ```ts
+// By company: a ticker or a CIK, no accession number needed.
+await client.financials.latest("AAPL"); // latest 10-K/10-Q: income, balance sheet, cash flow
+await client.financials.statementHistory("AAPL", "income-statement", { period: "annual", limit: 5 });
+await client.financials.statementHistory("AAPL", "cash-flow", { period: "ytd", limit: 8 });
+await client.financials.companyStatement("AAPL", "balance-sheet"); // as filed
+await client.financials.filings("AAPL", { limit: 10 }); // 10-K / 10-Q list with accession numbers
+await client.financials.sharesOutstanding({ ticker: "AAPL" });
+
+// By filing.
 await client.financials.incomeStatement(undefined, { ticker: "MSFT" });
 await client.financials.balanceSheet("0000320193-26-000006");
 await client.financials.cashFlow(undefined, { ticker: "AAPL", form: "10-K" });
@@ -108,7 +117,8 @@ await client.entities.sicCodes();
 
 ```ts
 await client.insiders.latest({ limit: 50 });
-await client.insiders.search({ ticker: "AAPL", acquiredDisposed: "A" });
+await client.insiders.search({ ticker: "AAPL", transactionCode: "P" }); // open-market purchases
+await client.insiders.search({ ticker: "AAPL", acceptedFrom: "2026-01-01", acceptedTo: "2026-03-31", page: 2 });
 await client.insiders.transactions({ personCik: "0001214123" });
 await client.insiders.buying({ limit: 25 });
 await client.insiders.topBuyers();
@@ -121,7 +131,7 @@ await client.insiders.person("0001214123");
 
 ```ts
 await client.institutions.list({ q: "Berkshire" });
-await client.institutions.holdings("0001067983", { sort: "value" });
+await client.institutions.holdings("0001067983", { sort: "value", limit: 50, page: 2 });
 await client.institutions.buys("0001067983", { quarter: "2024Q3" });
 await client.institutions.sectors("0001067983");
 await client.institutions.activity();

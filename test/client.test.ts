@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { VERSION } from "../src/version.js";
 import {
   AuthenticationError,
   BadRequestError,
@@ -69,7 +70,7 @@ describe("SECClient", () => {
 
     expect(calls.at(-1)?.init?.headers).toMatchObject({
       "x-api-key": "test_api_key",
-      "User-Agent": "secapi-node/0.1.0",
+      "User-Agent": `secapi-node/${VERSION}`,
     });
   });
 

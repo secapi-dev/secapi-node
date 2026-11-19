@@ -23,12 +23,21 @@ export interface InsiderTransactionsParams {
   insiderRole?: string;
   minValue?: number;
   limit?: number;
+  /** 1-based page. Feeds page up to roughly the first 10,000 rows; narrow the dates for older rows. */
+  page?: number;
+  /** Filing accepted on or after this date. */
   acceptedFrom?: DateParam;
+  /** Filing accepted on or before this date. */
+  acceptedTo?: DateParam;
+  /** Trade executed on or after this date. */
   transactionFrom?: DateParam;
+  /** Trade executed on or before this date. */
+  transactionTo?: DateParam;
 }
 
 export interface InsiderActivityParams {
   limit?: number;
+  page?: number;
   start?: DateParam;
   end?: DateParam;
 }
@@ -62,8 +71,11 @@ export class Insiders extends BaseResource {
       acquiredDisposed: params.acquiredDisposed,
       transactionCode: params.transactionCode,
       limit: params.limit,
+      page: params.page,
       acceptedFrom: params.acceptedFrom,
+      acceptedTo: params.acceptedTo,
       transactionFrom: params.transactionFrom,
+      transactionTo: params.transactionTo,
     };
 
     if (params.personCik) {
@@ -88,21 +100,25 @@ export class Insiders extends BaseResource {
     return this.transactions(params);
   }
 
-  latest(params: { ticker?: string; limit?: number } = {}): Promise<InsiderTransactionsResponse> {
+  latest(params: { ticker?: string; limit?: number; page?: number } = {}): Promise<InsiderTransactionsResponse> {
     return this.transactions(params);
   }
 
+  /** Open-market purchases (transaction code P, non-derivative), newest first. */
   buying(params: InsiderActivityParams = {}): Promise<InsiderTransactionsResponse> {
     return this.client.get("/v1/insiders/activity/buying", {
       limit: params.limit,
+      page: params.page,
       from: params.start,
       end: params.end,
     });
   }
 
+  /** Open-market sales (transaction code S, non-derivative), newest first. */
   selling(params: InsiderActivityParams = {}): Promise<InsiderTransactionsResponse> {
     return this.client.get("/v1/insiders/activity/selling", {
       limit: params.limit,
+      page: params.page,
       from: params.start,
       end: params.end,
     });
@@ -181,11 +197,20 @@ export class Insiders extends BaseResource {
     if (params.limit !== undefined) {
       query.limit = params.limit;
     }
+    if (params.page !== undefined) {
+      query.page = params.page;
+    }
     if (params.acceptedFrom !== undefined) {
       query.acceptedFrom = params.acceptedFrom;
     }
+    if (params.acceptedTo !== undefined) {
+      query.acceptedTo = params.acceptedTo;
+    }
     if (params.transactionFrom !== undefined) {
       query.transactionFrom = params.transactionFrom;
+    }
+    if (params.transactionTo !== undefined) {
+      query.transactionTo = params.transactionTo;
     }
     return this.transactions(query);
   }

@@ -44,11 +44,14 @@ export interface InstitutionFilingPeriodsParams {
 export interface InstitutionHoldingsParams {
   quarter?: string;
   limit?: number;
+  /** 1-based page of the portfolio (not used by holdingsHistory). */
+  page?: number;
   sort?: "value" | "shares" | "weight" | string;
 }
 
 export interface InstitutionHoldingsHistoryParams extends InstitutionHoldingsParams {
   year?: number;
+  maxPeriods?: number;
 }
 
 export interface InstitutionChangesParams {
@@ -119,6 +122,7 @@ export class Institutions extends BaseResource {
     return this.client.get(`/v1/institutions/${encodePath(cik)}/holdings`, {
       quarter: params.quarter,
       limit: params.limit,
+      page: params.page,
       sort: params.sort,
     });
   }
@@ -127,6 +131,7 @@ export class Institutions extends BaseResource {
     return this.client.get(`/v1/institutions/${encodePath(cik)}/holdings/history`, {
       year: params.year,
       quarter: params.quarter,
+      maxPeriods: params.maxPeriods,
       limit: params.limit,
       sort: params.sort,
     });

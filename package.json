@@ -1,6 +1,6 @@
 {
   "name": "secapi-node",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official TypeScript/Node SDK for secapi.dev - SEC filings, financials, insider transactions, and institutional holdings.",
   "type": "module",
   "license": "MIT",
@@ -45,7 +45,8 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:coverage": "node scripts/check-api-coverage.mjs"
   },
   "engines": {
     "node": ">=18"
