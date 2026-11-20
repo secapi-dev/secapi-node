@@ -1,17 +1,23 @@
 name: Publish to npm
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -23,6 +29,25 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm publish --provenance --access public
+
+      - name: Publish when this version is not on npm
+        id: publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "secapi-node@${version}" version >/dev/null 2>&1; then
+            echo "secapi-node@${version} is already on npm"
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          else
+            npm publish --provenance --access public
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub release
+        if: steps.publish.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          gh release create "v${version}" --title "v${version}" --generate-notes

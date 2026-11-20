@@ -190,6 +190,8 @@ npm test
 npm run build
 ```
 
+Bump `version` in `package.json` and push to `main`. That push publishes the new version to npm and creates the GitHub release. A push that does not change the version runs the checks and leaves npm unchanged.
+
 This initial TypeScript SDK mirrors the public method surface of `secapi-python`. Response
 types are intentionally forward-compatible object types; the next step is to generate
 precise response models from `https://api.secapi.dev/api/core/v3/api-docs`.
