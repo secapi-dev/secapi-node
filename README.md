@@ -19,7 +19,7 @@ console.log(filings.data);
 npm install secapi-node
 ```
 
-Requires Node.js 18+.
+Requires Node.js 26+.
 
 ## Authentication
 
@@ -179,7 +179,7 @@ const client = new SECClient({
 });
 ```
 
-The SDK uses Node 18+ native `fetch`. Pass a custom `fetch` implementation in tests or specialized runtimes.
+The SDK uses the Node.js native `fetch`. Pass a custom `fetch` implementation in tests or specialized runtimes.
 
 ## Development
 
